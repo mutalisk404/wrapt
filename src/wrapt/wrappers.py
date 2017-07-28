@@ -70,22 +70,7 @@ class _ObjectProxyMetaType(type):
 
         return type.__new__(cls, name, bases, dictionary)
 
-class ObjectProxy(with_metaclass(_ObjectProxyMetaType)):
-
-    __slots__ = '__wrapped__'
-
-    def __init__(self, wrapped):
-        object.__setattr__(self, '__wrapped__', wrapped)
-
-        # Python 3.2+ has the __qualname__ attribute, but it does not
-        # allow it to be overridden using a property and it must instead
-        # be an actual string object instead.
-
-        try:
-            object.__setattr__(self, '__qualname__', wrapped.__qualname__)
-        except AttributeError:
-            pass
-
+class _ObjectProxyBase(with_metaclass(_ObjectProxyMetaType)):
     @property
     def __name__(self):
         return self.__wrapped__.__name__
@@ -409,6 +394,33 @@ class ObjectProxy(with_metaclass(_ObjectProxyMetaType)):
 
     def __iter__(self):
         return iter(self.__wrapped__)
+
+class ObjectProxy(_ObjectProxyBase):
+
+    __slots__ = '__wrapped__'
+
+    def __init__(self, wrapped):
+        object.__setattr__(self, '__wrapped__', wrapped)
+
+        # Python 3.2+ has the __qualname__ attribute, but it does not
+        # allow it to be overridden using a property and it must instead
+        # be an actual string object instead.
+
+        try:
+            object.__setattr__(self, '__qualname__', wrapped.__qualname__)
+        except AttributeError:
+            pass
+
+class CallbackObjectProxy(_ObjectProxyBase):
+
+    __slots__ = ()
+
+    def __init__(self, callback) -> None:
+        object.__setattr__(self, '__callback__', callback)
+
+    @property
+    def __wrapped__(self):
+        return self.__callback__()
 
 class CallableObjectProxy(ObjectProxy):
 
